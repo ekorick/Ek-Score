@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ne Score - Canlı Maç Merkezi</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --modal-bg: #252525;
+            --text-main: #ffffff;
+            --text-dim: #aaaaaa;
+            --accent: #FFC107;
+            --live-red: #ff3b30;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* HEADER */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .logo-img { width: 40px; height: 40px; border-radius: 50%; }
+        .refresh-info { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+
+        /* LİG BAŞLIKLARI */
+        .league-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-left: 5px;
+        }
+
+        /* MAÇ KARTI */
+        .match-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer; /* Tıklanabilir olduğu belli olsun */
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .match-card:hover {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+
+        .teams {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .team-info { display: flex; align-items: center; gap: 10px; }
+        .team-logo { width: 24px; height: 24px; object-fit: contain; }
+        .score { font-weight: bold; font-size: 16px; color: var(--text-main); }
+
+        /* DURUM KUTUSU */
+        .status-box {
+            width: 80px;
+            text-align: right;
+            font-size: 12px;
+            color: var(--text-dim);
+            padding-left: 10px;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            height: 40px;
+        }
+
+        .status-live { color: var(--live-red); font-weight: bold; animation: pulse 1.5s infinite; }
+        .status-time { color: var(--text-main); font-weight: bold; font-size: 13px; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* --- POPUP (MODAL) STİLLERİ --- */
+        .modal {
+            display: none; /* Başlangıçta gizli */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8); /* Arka plan karartma */
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--modal-bg);
+            padding: 0;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background-color: #333;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+
+        .modal-score-area {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #444;
+        }
+
+        .modal-team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 35%;
+            text-align: center;
+        }
+
+        .modal-logo { width: 50px; height: 50px; }
+        .modal-score { font-size: 32px; font-weight: bold; }
+        .modal-time { font-size: 14px; color: var(--accent); margin-top: 5px; }
+
+        .modal-details {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .goal-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+
+        .goal-time { color: var(--accent); font-weight: bold; min-width: 30px; }
+        .goal-icon { font-size: 16px; }
+
+        .no-goals { text-align: center; color: #666; padding: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>
+                <img src="https://i.hizliresim.com/pjex03v.png" class="logo-img" alt="Logo">
+                Ne Score
+            </h1>
+            <div class="refresh-info">Maça tıklayarak golleri görebilirsiniz</div>
+        </header>
+
+        <div id="content-area">
+            <div style="text-align:center; padding:50px;">Veriler yükleniyor...</div>
+        </div>
+    </div>
+
+    <div id="matchModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span>Maç Detayı</span>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <div class="modal-score-area">
+                <div class="modal-team">
+                    <img id="m-home-logo" class="modal-logo" src="">
+                    <span id="m-home-name" style="font-size:12px;">Home</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                    <div class="modal-score">
+                        <span id="m-home-score">0</span> - <span id="m-away-score">0</span>
+                    </div>
+                    <div id="m-status" class="modal-time">dk</div>
+                </div>
+                <div class="modal-team">
+                    <img id="m-away-logo" class="modal-logo" src="">
+                    <span id="m-away-name" style="font-size:12px;">Away</span>
+                </div>
+            </div>
+
+            <div class="modal-details" id="m-details">
+                <div class="no-goals">Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- AYARLAR ---
+        const API_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer";
+        const LEAGUES = [
+            { id: "tur.1", name: "Süper Lig", icon: "🇹🇷" },
+            { id: "uefa.champions", name: "Şampiyonlar Ligi", icon: "🏆" },
+            { id: "uefa.europa", name: "Avrupa Ligi", icon: "🇪🇺" },
+            { id: "eng.1", name: "Premier Lig", icon: "🇬🇧" },
+            { id: "esp.1", name: "La Liga", icon: "🇪🇸" },
+            { id: "ita.1", name: "Serie A", icon: "🇮🇹" },
+            { id: "ger.1", name: "Bundesliga", icon: "🇩🇪" },
+            { id: "fra.1", name: "Ligue 1", icon: "🇫🇷" }
+        ];
+
+        // --- YARDIMCI FONKSİYONLAR ---
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function getStatusDisplay(match) {
+            const state = match.status.type.state;
+            const detail = match.status.type.shortDetail;
+            const dateStr = match.date;
+
+            // Maç Başlamadıysa -> SAAT göster
+            if (state === "pre") {
+                return `<span class="status-time">${formatTime(dateStr)}</span>`; 
+            }
+            // Canlıysa
+            if (state === "in") {
+                return `<span class="status-live">Canlı<br>${detail}</span>`;
+            }
+            // Bittiyse
+            if (state === "post") {
+                return `<span style="color:#aaa">MS</span>`;
+            }
+            return detail;
+        }
+
+        // --- ANA VERİ ÇEKME ---
+
+        async function fetchLeagueData(leagueId) {
+            try {
+                const response = await fetch(`${API_BASE}/${leagueId}/scoreboard`);
+                const data = await response.json();
+                return data.events || [];
+            } catch { return []; }
+        }
+
+        async function renderAll() {
+            const contentArea = document.getElementById('content-area');
+            let fullHtml = "";
+            let hasMatch = false;
+
+            for (const league of LEAGUES) {
+                const matches = await fetchLeagueData(league.id);
+                
+                if (matches.length > 0) {
+                    hasMatch = true;
+                    let matchesHtml = "";
+                    
+                    matches.forEach(match => {
+                        const comp = match.competitions[0];
+                        const home = comp.competitors.find(c => c.homeAway === 'home');
+                        const away = comp.competitors.find(c => c.homeAway === 'away');
+                        
+                        // Verileri güvenli çekme
+                        const homeName = home.team.shortDisplayName || home.team.displayName;
+                        const awayName = away.team.shortDisplayName || away.team.displayName;
+                        const homeLogo = home.team.logo || "";
+                        const awayLogo = away.team.logo || "";
+                        const hScore = home.score || "0";
+                        const aScore = away.score || "0";
+                        const statusHtml = getStatusDisplay(match);
+
+                        // Tıklanınca açılacak verileri data attribute olarak sakla (Basitlik için)
+                        // Detayları ayrıca çekeceğiz.
+                        matchesHtml += `
+                            <div class="match-card" onclick="openMatchDetails('${match.id}', '${homeName}', '${awayName}', '${homeLogo}', '${awayLogo}', '${hScore}', '${aScore}', '${match.status.type.shortDetail}')">
+                                <div class="teams">
+                                    <div class="team">
+                                        <div class="team-info">
+                                            <img src="${homeLogo}" class="team-logo">
+                                            <span>${homeName}</span>
+                                        </div>
+                                        <div class="score">${hScore}</div>
+                                    </div>
+                                    <div class="team">
+                                        <div class="team-info">
+                                            <img src="${awayLogo}" class="team-logo">
+                                            <span>${awayName}</span>
+                                        </div>
+                                        <div class="score">${aScore}</div>
+                                    </div>
+                                </div>
+                                <div class="status-box">
+                                    ${statusHtml}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    fullHtml += `
+                        <div class="league-title">
+                            <span style="font-size:20px">${league.icon}</span> ${league.name}
+                        </div>
+                        <div>${matchesHtml}</div>
+                    `;
+                }
+            }
+
+            if (!hasMatch) fullHtml = "<div style='text-align:center; padding:30px; color:#666;'>Bugün maç yok.</div>";
+            
+            // Sadece içerik değişmişse güncelle (titremeyi azaltır)
+            if (contentArea.innerHTML.length < 100 || contentArea.innerHTML !== fullHtml) {
+                contentArea.innerHTML = fullHtml;
+            }
+        }
+
+        // --- POPUP (MODAL) İŞLEMLERİ ---
+
+        const modal = document.getElementById('matchModal');
+
+        async function openMatchDetails(id, hName, aName, hLogo, aLogo, hScore, aScore, status) {
+            // 1. Modal'ı aç ve temel bilgileri doldur
+            modal.style.display = "flex";
+            document.getElementById('m-home-name').innerText = hName;
+            document.getElementById('m-away-name').innerText = aName;
+            document.getElementById('m-home-logo').src = hLogo;
+            document.getElementById('m-away-logo').src = aLogo;
+            document.getElementById('m-home-score').innerText = hScore;
+            document.getElementById('m-away-score').innerText = aScore;
+            document.getElementById('m-status').innerText = status === "Scheduled" ? "Başlamadı" : status;
+            
+            const detailsDiv = document.getElementById('m-details');
+            detailsDiv.innerHTML = '<div class="no-goals">Detaylar yükleniyor...</div>';
+
+            // 2. Golleri API'den çek (Summary Endpoint)
+            try {
+                // ESPN Summary Endpoint: Tüm ligler için 'all' kullanılır
+                const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=${id}`);
+                const data = await res.json();
+                
+                // Golleri bul
+                let goalsHtml = "";
+                const details = data.header.competitions[0].details; 
+                
+                if (details && details.length > 0) {
+                    details.forEach(item => {
+                        if (item.type.text === "Goal") {
+                            // Hangi takım attı?
+                            const teamId = item.team.id;
+                            const isHome = (teamId === data.header.competitions[0].competitors[0].id);
+                            const teamColor = isHome ? "#FFC107" : "#4FC3F7"; // Ev:Sarı, Dep:Mavi tonu
+                            
+                            goalsHtml += `
+                                <div class="goal-item">
+                                    <div class="goal-time">${item.clock.displayValue}</div>
+                                    <div class="goal-icon">⚽</div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:bold; color:${teamColor}">${item.team.displayName}</div>
+                                        <div style="font-size:12px; color:#ccc;">${item.participants[0].athlete.displayName}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                // Eğer gol varsa yaz, yoksa "Gol yok" de
+                if (goalsHtml) {
+                    detailsDiv.innerHTML = goalsHtml;
+                } else if (status === "Scheduled") {
+                    detailsDiv.innerHTML = '<div class="no-goals">Maç henüz başlamadı.</div>';
+                } else {
+                    detailsDiv.innerHTML = '<div class="no-goals">Henüz gol sesi çıkmadı.</div>';
+                }
+
+            } catch (e) {
+                detailsDiv.innerHTML = '<div class="no-goals">Detay bilgisi alınamadı.</div>';
+            }
+        }
+
+        function closeModal(e) {
+            // Eğer dışarı tıklandıysa veya X butonuna
+            if (!e || e.target === modal || e.target.classList.contains('close-btn')) {
+                modal.style.display = "none";
+            }
+        }
+
+        // --- BAŞLAT ---
+        renderAll();
+        // 30 sn'de bir yenile
+        setInterval(renderAll, 30000);
+
+    </script>
+</body>
+</html>
